@@ -1,4 +1,40 @@
 {
   "name": "vite-plugin-vue-component-override",
-  "packageManager": "yarn@4.6.0"
+  "version": "0.1.0",
+  "author": "Simon Asika",
+  "description": "Make Vue component can be override at runtime.",
+  "homepage": "https://github.com/asika32764/vite-plugin-vue-component-override",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite build --mode development --watch",
+    "build": "vite build",
+    "build:prod": "vite build",
+    "upgrade": "yarn up '**' -R"
+  },
+  "packageManager": "yarn@4.6.0",
+  "devDependencies": {
+    "minimatch": "^10.0.3",
+    "typescript": "^5.9.3",
+    "unplugin-dts": "^1.0.0-beta.6",
+    "vite": "^7.1.12"
+  },
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "vue",
+    "vue3",
+    "component",
+    "override"
+  ]
 }
