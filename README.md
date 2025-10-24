@@ -14,7 +14,8 @@ resolver at build time so consuming projects can override specific components as
 
 ### How it works
 
-During build, the plugin finds any import statements that load `*.vue` components and replaces them with a call to a resolver function:
+During build, the plugin finds any import statements that load `*.vue` components and replaces them with a call to a
+resolver function:
 
 ```ts
 import Foo from '~myui/components/Foo.vue';
@@ -27,7 +28,8 @@ import Foo_Tmp45833 from '~myui/components/Foo.vue';
 const Foo = resolveComponent('{component-alias}', Foo_Tmp45833);
 ```
 
-If the app using the library has overridden a component, `resolveComponent` returns the overridden component; otherwise it returns the original. 
+If the app using the library has overridden a component, `resolveComponent` returns the overridden component; otherwise
+it returns the original.
 
 The plugin also supports async imports.
 
@@ -43,7 +45,9 @@ const Foo = defineAsyncComponent(() => resolveAsyncComponent('{component-alias}'
 
 ### Limitations and Use Cases
 
-This plugin must inject the resolver during the component-library build, so it cannot override components in already-published `npm` libraries. It is useful for companies or teams that maintain internal libraries and need to change library behavior for specific projects.
+This plugin must inject the resolver during the component-library build, so it cannot override components in
+already-published `npm` libraries. It is useful for companies or teams that maintain internal libraries and need to
+change library behavior for specific projects.
 
 ## Installation
 
@@ -85,9 +89,11 @@ import Foo from '~myui/components/Foo.vue';
 
 ### Externalize
 
-Important: Do not bundle `vite-plugin-vue-component-override` into your compiled component library. Bundling it can cause duplicate-definition errors in projects that use the library.
+Important: Do not bundle `vite-plugin-vue-component-override` into your compiled component library. Bundling it can
+cause duplicate-definition errors in projects that use the library.
 
-By default the plugin is treated as external. If you customize Rollup/Vite's `external` option, make sure `vite-plugin-vue-component-override` is included.
+By default the plugin is treated as external. If you customize Rollup/Vite's `external` option, make sure
+`vite-plugin-vue-component-override` is included.
 
 ```js
 // dist/some/file/you-compiled.js
@@ -114,9 +120,10 @@ export default defineConfig({
 });
 ```
 
-## Usage: Overriding components in the consuming app
+## Usage: Overriding components in the App
 
-The consuming app must install the package as well, but no configuration is required; you can import and use it directly.
+The consuming app must install the package as well, but no configuration is required; you can import and use it
+directly.
 
 ```bash
 npm install vite-plugin-vue-component-override --save-dev
@@ -140,7 +147,8 @@ createApp(App).mount('#app');
 ```
 
 > [!important]
-> Because of Vue's scoping, you cannot override a component for just one app. Overrides apply globally by the component's resolved import path.
+> Because of Vue's scoping, you cannot override a component for just one app. Overrides apply globally by the
+> component's resolved import path.
 
 ### Async components
 
@@ -161,7 +169,9 @@ overrideVueAsyncComponent('~myui/components/Foo.vue', () => import('./overrides/
 ```
 
 Avoid mixing sync and async override methods. Vue decides how to load a component based on how it is defined.
-Note that if a library imports the same component both synchronously and asynchronously, you must register the override twice for it to take effect:
+
+Note that if a library imports the same component both synchronously and asynchronously, you must register the override
+twice for it to take effect:
 
 ```ts
 import { overrideVueComponent, overrideVueAsyncComponent } from 'vite-plugin-vue-component-override';
@@ -174,14 +184,23 @@ overrideVueAsyncComponent('~myui/components/Foo.vue', CustomFoo);
 
 ### Import Paths
 
-By default, the override id is the component's import path. To avoid mismatches, prefer using absolute paths rather than relative paths.
+By default, the override id is the component's import path. To avoid mismatches, prefer using absolute paths rather than
+relative paths.
 
 ```ts
 // GOOD
 import Foo from '~myui/components/Foo.vue';
 
+// Override
+overrideVueComponent('~myui/components/Foo.vue', CustomFoo);
+
+// ----
+
 // BAD: But still works if you provide same path
 import Foo from '../../components/Foo.vue';
+
+// Override
+overrideVueComponent('../../components/Foo.vue', CustomFoo);
 ```
 
 ### Alias
@@ -202,7 +221,7 @@ export default defineConfig({
         'MyUIBar': '~myui/components/Bar.vue',
       },
 
-      // OR
+      // OR use functions
 
       alias: (id) => {
         if (id === '~myui/components/Foo.vue') {
