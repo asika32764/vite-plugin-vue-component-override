@@ -1,0 +1,4 @@
+{
+  "name": "vite-plugin-vue-component-override",
+  "packageManager": "yarn@4.6.0"
+}
