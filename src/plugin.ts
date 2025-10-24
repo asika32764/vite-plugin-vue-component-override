@@ -23,7 +23,7 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
   return [
     {
       name: 'vue-component-override',
-      enforce: 'pre',
+      enforce: 'post',
       config(config) {
         if (typeof config.build?.rollupOptions?.external === 'function') {
           const originalExternal = config.build.rollupOptions.external;
@@ -66,7 +66,7 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
         let shouldAddAsyncResolver = false;
 
         if (handleStaticImports) {
-          code = code.replaceAll(/import\s+(.*?)\s+from\s+'((.*?)\.vue)'\s*(;?)/g, (match, component, uri) => {
+          code = code.replaceAll(/import\s+(.*?)\s+from\s+['"]((.*?)\.vue)['"]\s*(;?)/g, (match, component, uri) => {
             if (component.includes('__Tmp')) {
               return match;
             }

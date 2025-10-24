@@ -1533,7 +1533,7 @@ function vueComponentOverride(options = {}) {
   return [
     {
       name: "vue-component-override",
-      enforce: "pre",
+      enforce: "post",
       config(config) {
         if (typeof config.build?.rollupOptions?.external === "function") {
           const originalExternal = config.build.rollupOptions.external;
@@ -1569,7 +1569,7 @@ function vueComponentOverride(options = {}) {
         let shouldAddResolver = false;
         let shouldAddAsyncResolver = false;
         if (handleStaticImports) {
-          code = code.replaceAll(/import\s+(.*?)\s+from\s+'((.*?)\.vue)'\s*(;?)/g, (match2, component, uri) => {
+          code = code.replaceAll(/import\s+(.*?)\s+from\s+['"]((.*?)\.vue)['"]\s*(;?)/g, (match2, component, uri) => {
             if (component.includes("__Tmp")) {
               return match2;
             }
