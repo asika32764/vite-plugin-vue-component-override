@@ -21,20 +21,20 @@ function overrideVueAsyncComponent(id, component) {
   if (typeof component === "function") {
     component = component();
   }
-  asyncRegistry[id] = component;
+  asyncRegistry[id] = Promise.resolve(component);
 }
-function resolveComponent(id, def) {
+function resolveVueComponent(id, def) {
   return registry[id] ?? def;
 }
-function resolveAsyncComponent(id) {
-  return Promise.resolve(asyncRegistry[id]);
+function resolveVueAsyncComponent(id) {
+  return asyncRegistry[id];
 }
 export {
   asyncRegistry,
   overrideVueAsyncComponent,
   overrideVueComponent,
   registry,
-  resolveAsyncComponent,
-  resolveComponent
+  resolveVueAsyncComponent,
+  resolveVueComponent
 };
 //# sourceMappingURL=index.js.map

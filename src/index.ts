@@ -28,15 +28,15 @@ export function overrideVueAsyncComponent(id: string, component: any) {
     component = component();
   }
 
-  asyncRegistry[id] = component;
+  asyncRegistry[id] = Promise.resolve(component);
 }
 
-export function resolveComponent(id: string, def: any) {
+export function resolveVueComponent(id: string, def?: any): any | undefined {
   return registry[id] ?? def;
 }
 
-export function resolveAsyncComponent(id: string) {
-  return Promise.resolve(asyncRegistry[id]);
+export function resolveVueAsyncComponent(id: string): Promise<any> | undefined {
+  return asyncRegistry[id];
 }
 
 export { registry, asyncRegistry };

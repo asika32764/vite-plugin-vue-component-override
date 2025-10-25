@@ -1530,10 +1530,11 @@ function vueComponentOverride(options = {}) {
   const handleDynamicImports = options.handleDynamicImports ?? true;
   const excludes = options.excludes;
   const aliasOption = options.alias;
+  const uid = Math.random().toString(36).substring(2, 8);
   return [
     {
       name: "vue-component-override",
-      enforce: "post",
+      // enforce: 'post',
       config(config) {
         if (typeof config.build?.rollupOptions?.external === "function") {
           const originalExternal = config.build.rollupOptions.external;
@@ -1568,6 +1569,8 @@ function vueComponentOverride(options = {}) {
         code = striped;
         let shouldAddResolver = false;
         let shouldAddAsyncResolver = false;
+        const resolveFuncName = `__VUE_COMPONENT_OVERRIDE_RESOLVE_${uid}__`;
+        const resolveAsyncFuncName = `__VUE_COMPONENT_OVERRIDE_ASYNC_RESOLVE_${uid}__`;
         if (handleStaticImports) {
           code = code.replaceAll(/import\s+(.*?)\s+from\s+['"]((.*?)\.vue)['"]\s*(;?)/g, (match2, component, uri) => {
             if (component.includes("__Tmp")) {
@@ -1577,7 +1580,7 @@ function vueComponentOverride(options = {}) {
             const tmpName = component + "__Tmp" + Math.floor(Math.random() * 1e5);
             let replaced = `import ${tmpName} from '${uri}';
 
-const ${component} = resolveComponent('${alias}', ${tmpName});`;
+const ${component} = ${resolveFuncName}('${alias}', ${tmpName});`;
             shouldAddResolver = true;
             return replaced;
           });
@@ -1586,14 +1589,14 @@ const ${component} = resolveComponent('${alias}', ${tmpName});`;
           code = code.replaceAll(/import\(\s*['"]((.*?)\.vue)['"]\s*\)/g, (match2, uri) => {
             shouldAddAsyncResolver = true;
             const alias = resolveAlias(aliasOption, uri);
-            return `resolveAsyncComponent('${alias}') ?? import(/* @vue-component-override */'${uri}')`;
+            return `${resolveAsyncFuncName}('${alias}') ?? import(/* @vue-component-override */'${uri}')`;
           });
         }
         if (shouldAddResolver) {
-          code = addResolverToFile("resolveComponent", code, id);
+          code = addResolverToFile("resolveVueComponent", resolveFuncName, code, id);
         }
         if (shouldAddAsyncResolver) {
-          code = addResolverToFile("resolveAsyncComponent", code, id);
+          code = addResolverToFile("resolveVueAsyncComponent", resolveAsyncFuncName, code, id);
         }
         return {
           code: restoreComments(code, comments),
@@ -1621,7 +1624,7 @@ function resolveAlias(alias, id) {
   }
   return id;
 }
-function addResolverToFile(funcName, code, id) {
+function addResolverToFile(importName, funcName, code, id) {
   if (!new RegExp(`{.*?${funcName}.*?}s+from`).test(code)) {
     if (id.endsWith(".vue")) {
       const vueScriptMatch = code.match(/<script(.*?)?>/);
@@ -1629,9 +1632,12 @@ function addResolverToFile(funcName, code, id) {
         const insertPos = vueScriptMatch.index + vueScriptMatch[0].length;
         code = code.slice(0, insertPos) + `
 import { ${funcName} } from '${pkg.name}';` + code.slice(insertPos);
+      } else {
+        code = `import { ${importName} as ${funcName} } from '${pkg.name}';
+` + code;
       }
     } else {
-      code = `import { ${funcName} } from '${pkg.name}';
+      code = `import { ${importName} as ${funcName} } from '${pkg.name}';
 ` + code;
     }
   }

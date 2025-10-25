@@ -22,10 +22,10 @@ import Foo from '~myui/components/Foo.vue';
 
 // Convert to:
 
-import { resolveComponent } from 'vite-plugin-vue-component-override';
+import { resolveVueComponent as __VUE_COMPONENT_OVERRIDE_RESOLVE_4523368__ } from 'vite-plugin-vue-component-override';
 import Foo_Tmp45833 from '~myui/components/Foo.vue';
 
-const Foo = resolveComponent('{component-alias}', Foo_Tmp45833);
+const Foo = __VUE_COMPONENT_OVERRIDE_RESOLVE_4523368__('{component-alias}', Foo_Tmp45833);
 ```
 
 If the app using the library has overridden a component, `resolveComponent` returns the overridden component; otherwise
@@ -38,9 +38,9 @@ const Foo = defineAsyncComponent(() => import('~myui/components/Foo.vue'));
 
 // Convert to:
 
-import { resolveAsyncComponent } from 'vite-plugin-vue-component-override';
+import { resolveVueAsyncComponent } from 'vite-plugin-vue-component-override';
 
-const Foo = defineAsyncComponent(() => resolveAsyncComponent('{component-alias}') ?? import('~myui/components/Foo.vue'));
+const Foo = defineAsyncComponent(() => resolveVueAsyncComponent('{component-alias}') ?? import('~myui/components/Foo.vue'));
 ```
 
 ### Limitations and Use Cases

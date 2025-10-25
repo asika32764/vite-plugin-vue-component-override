@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         external: [
           'vite',
+          'fs',
+          'path',
         ]
       },
       outDir: 'dist',
