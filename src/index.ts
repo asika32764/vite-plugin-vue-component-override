@@ -35,11 +35,11 @@ export function overrideVueAsyncComponent(id: string, component: any) {
 
 export function resolveVueComponent(name: string, def?: any): any | undefined {
   const inc = getCurrentInstance();
-  console.log(inc);
+
   if (!inc) {
     return def;
   }
-  console.log(inc.appContext.components);
+
   const components = inc.appContext.components;
 
   const found = components[name] || components[toPascalCase(name)] || components[toKebabCase(name)];

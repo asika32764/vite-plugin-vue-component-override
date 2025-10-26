@@ -26,11 +26,9 @@ function overrideVueAsyncComponent(id, component) {
 }
 function resolveVueComponent(name, def) {
   const inc = getCurrentInstance();
-  console.log(inc);
   if (!inc) {
     return def;
   }
-  console.log(inc.appContext.components);
   const components = inc.appContext.components;
   const found = components[name] || components[toPascalCase(name)] || components[toKebabCase(name)];
   return found ?? def;
