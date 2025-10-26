@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-vue-component-override",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "Simon Asika",
   "description": "Make Vue component can be override at runtime.",
   "homepage": "https://github.com/asika32764/vite-plugin-vue-component-override",
