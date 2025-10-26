@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
           'vite',
           'fs',
           'path',
+          'vue',
         ]
       },
       outDir: 'dist',

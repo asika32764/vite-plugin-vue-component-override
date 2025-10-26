@@ -22,14 +22,26 @@ import Foo from '~myui/components/Foo.vue';
 
 // Convert to:
 
-import { resolveVueComponent as __VUE_COMPONENT_OVERRIDE_RESOLVE_4523368__ } from 'vite-plugin-vue-component-override';
+import { resolveVueComponent } from 'vite-plugin-vue-component-override';
 import Foo_Tmp45833 from '~myui/components/Foo.vue';
 
-const Foo = __VUE_COMPONENT_OVERRIDE_RESOLVE_4523368__('{component-alias}', Foo_Tmp45833);
+const Foo = resolveVueComponent('Foo', Foo_Tmp45833);
 ```
 
-If the app using the library has overridden a component, `resolveComponent` returns the overridden component; otherwise
+If the app using the library has overridden a component, `resolveVueComponent()` returns the overridden component; otherwise
 it returns the original.
+
+Then you can simply use `app.component('Foo', ...)` to override the component in the consuming app.
+
+```ts
+import { createApp } from '@vue/runtime-dom';
+const app = createApp(MyApp);
+
+// Override here
+aoo.component('Foo', CustomFooComponent);
+
+app.mount('#app');
+```
 
 The plugin also supports async imports.
 
@@ -40,7 +52,7 @@ const Foo = defineAsyncComponent(() => import('~myui/components/Foo.vue'));
 
 import { resolveVueAsyncComponent } from 'vite-plugin-vue-component-override';
 
-const Foo = defineAsyncComponent(() => resolveVueAsyncComponent('{component-alias}') ?? import('~myui/components/Foo.vue'));
+const Foo = resolveVueAsyncComponent('Foo', defineAsyncComponent(() => import('~myui/components/Foo.vue')));
 ```
 
 ### Limitations and Use Cases
@@ -87,164 +99,18 @@ import Foo from '~myui/components/Foo.vue';
 // Will be auto-convert
 ```
 
-### Externalize
-
-Important: Do not bundle `vite-plugin-vue-component-override` into your compiled component library. Bundling it can
-cause duplicate-definition errors in projects that use the library.
-
-By default the plugin is treated as external. If you customize Rollup/Vite's `external` option, make sure
-`vite-plugin-vue-component-override` is included.
-
-```js
-// dist/some/file/you-compiled.js
-
-// CORRECT: "vite-plugin-vue-component-override" should be externalized
-import { resolveComponent as Q } from "vite-plugin-vue-component-override";
-
-const i = Q("Component", zt), a = l, u = _();
-```
-
-If it's not externalized, add it to `vite.config.js`:
-
-```js
-export default defineConfig({
-  // ...
-  build: {
-    rollupOptions: {
-      external: [
-        // Add this line if not exists
-        'vite-plugin-vue-component-override'
-      ]
-    }
-  }
-});
-```
-
 ## Usage: Overriding components in the App
 
-The consuming app must install the package as well, but no configuration is required; you can import and use it
-directly.
-
-```bash
-npm install vite-plugin-vue-component-override --save-dev
-
-＃OR
-
-yarn add vite-plugin-vue-component-override --dev
-```
-
-In your consuming project, to override a component, register the override globally before starting the Vue app:
+In your consuming project, override components before starting the Vue app:
 
 ```ts
-import { overrideVueComponent } from 'vite-plugin-vue-component-override';
-
 import CustomFoo from './overrides/CustomFoo.vue';
 
-overrideVueComponent('~myui/components/Foo.vue', CustomFoo);
+const app = createApp(App);
 
-// Now start Vue App
-createApp(App).mount('#app');
-```
+app.component('Foo', CustomFoo);
 
-> [!important]
-> Because of Vue's scoping, you cannot override a component for just one app. Overrides apply globally by the
-> component's resolved import path.
-
-### Async components
-
-When a library loads a component with `defineAsyncComponent`, use `overrideVueAsyncComponent` to override it:
-
-```ts
-import { overrideVueAsyncComponent } from 'vite-plugin-vue-component-override';
-
-import CustomFoo from './overrides/CustomFoo.vue';
-
-overrideVueAsyncComponent('~myui/components/Foo.vue', CustomFoo);
-// OR
-overrideVueAsyncComponent('~myui/components/Foo.vue', Promise.resolve(CustomFoo));
-// OR
-overrideVueAsyncComponent('~myui/components/Foo.vue', import('./overrides/CustomFoo.vue'));
-// OR
-overrideVueAsyncComponent('~myui/components/Foo.vue', () => import('./overrides/CustomFoo.vue'));
-```
-
-Avoid mixing sync and async override methods. Vue decides how to load a component based on how it is defined.
-
-Note that if a library imports the same component both synchronously and asynchronously, you must register the override
-twice for it to take effect:
-
-```ts
-import { overrideVueComponent, overrideVueAsyncComponent } from 'vite-plugin-vue-component-override';
-
-import CustomFoo from './overrides/CustomFoo.vue';
-
-overrideVueComponent('~myui/components/Foo.vue', CustomFoo);
-overrideVueAsyncComponent('~myui/components/Foo.vue', CustomFoo);
-```
-
-### Import Paths
-
-By default, the override id is the component's import path. To avoid mismatches, prefer using absolute paths rather than
-relative paths.
-
-```ts
-// GOOD
-import Foo from '~myui/components/Foo.vue';
-
-// Override
-overrideVueComponent('~myui/components/Foo.vue', CustomFoo);
-
-// ----
-
-// BAD: But still works if you provide same path
-import Foo from '../../components/Foo.vue';
-
-// Override
-overrideVueComponent('../../components/Foo.vue', CustomFoo);
-```
-
-### Alias
-
-This plugin also provides `alias` so component IDs can be shorter. First, set up aliases in the library project:
-
-```ts
-import vueComponentOverride from 'vite-plugin-vue-component-override/plugin';
-
-export default defineConfig({
-  // ...
-  plugins: [
-    vue(),
-
-    vueComponentOverride({
-      alias: {
-        'MyUIFoo': '~myui/components/Foo.vue',
-        'MyUIBar': '~myui/components/Bar.vue',
-      },
-
-      // OR use functions
-
-      alias: (id) => {
-        if (id === '~myui/components/Foo.vue') {
-          return 'MyUIFoo';
-        }
-
-        if (id === '~myui/components/Bar.vue') {
-          return 'MyUIBar';
-        }
-      }
-    }),
-  ],
-});
-```
-
-Then, in the consuming project, you can use the alias directly:
-
-```ts
-import { overrideVueComponent } from 'vite-plugin-vue-component-override';
-
-import CustomFoo from './overrides/CustomFoo.vue';
-
-overrideVueComponent('MyUIFoo', CustomFoo);
+app.mount('#app');
 ```
 
 ## Configuration
@@ -252,7 +118,6 @@ overrideVueComponent('MyUIFoo', CustomFoo);
 Available options:
 
 ```ts
-export type AliasCallback = (id: string) => string | undefined | null;
 export type ExcludeCallback = (code: string, id: string) => boolean | undefined | null;
 
 export interface VueComponentOverrideOptions {
@@ -269,11 +134,7 @@ export interface VueComponentOverrideOptions {
    */
   handleDynamicImports?: boolean; // Default true
   /**
-   * Alias mapping for component IDs
-   */
-  alias?: Record<string, string> | AliasCallback;
-  /**
-   * Exclude certain files from being processed by the plugin
+   * Exclude components from being processed by the plugin
    */
   excludes?: string[] | string | RegExp[] | RegExp | ExcludeCallback;
 }

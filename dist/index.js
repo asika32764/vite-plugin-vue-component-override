@@ -1,3 +1,4 @@
+import { getCurrentInstance } from "vue";
 const registry = {};
 const asyncRegistry = {};
 function overrideVueComponent(id, component) {
@@ -23,8 +24,22 @@ function overrideVueAsyncComponent(id, component) {
   }
   asyncRegistry[id] = Promise.resolve(component);
 }
-function resolveVueComponent(id, def) {
-  return registry[id] ?? def;
+function resolveVueComponent(name, def) {
+  const inc = getCurrentInstance();
+  console.log(inc);
+  if (!inc) {
+    return def;
+  }
+  console.log(inc.appContext.components);
+  const components = inc.appContext.components;
+  const found = components[name] || components[toPascalCase(name)] || components[toKebabCase(name)];
+  return found ?? def;
+}
+function toKebabCase(text) {
+  return text.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase();
+}
+function toPascalCase(text) {
+  return text.replace(/(^\w|-\w)/g, (t) => t.replace(/-/, "").toUpperCase());
 }
 function resolveVueAsyncComponent(id) {
   return asyncRegistry[id];
