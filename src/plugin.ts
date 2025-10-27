@@ -50,12 +50,16 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
       //   return config;
       // },
       transform(code, id) {
-        if (id.includes('?')) {
-          return null;
-        }
+        const fileUri = new URL(id, 'file://');
 
-        if (id.includes('Additional')) {
-          console.log(id);
+        if (id.endsWith('.vue')) {
+          // if (id.includes('Additional')) {
+          //   console.log(id, code);
+          // }
+
+          if (fileUri.searchParams.get('setup') !== 'true') {
+            return null;
+          }
         }
 
         if (!new RegExp(`\\.(${extensions.join('|')})$`).test(id)) {
@@ -126,15 +130,16 @@ const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
         if (shouldAddAsyncResolver) {
           addResolverToFile('resolveVueAsyncComponent', resolveAsyncFuncName, s, safeCode, id);
         }
-
+        // if (id.includes('Additional')) {
+        //   console.log(s.toString());
+        // }
         return {
           code: s.toString(),
-          map: null,
-          // map: s.generateMap({
-          //   source: id,
-          //   hires: true,
-          //   includeContent: true
-          // }),
+          map: s.generateMap({
+            source: id,
+            hires: true,
+            includeContent: true
+          }),
         };
       }
     }

@@ -2627,11 +2627,11 @@ function vueComponentOverride(options = {}) {
       //   return config;
       // },
       transform(code, id) {
-        if (id.includes("?")) {
-          return null;
-        }
-        if (id.includes("Additional")) {
-          console.log(id);
+        const fileUri = new URL(id, "file://");
+        if (id.endsWith(".vue")) {
+          if (fileUri.searchParams.get("setup") !== "true") {
+            return null;
+          }
         }
         if (!new RegExp(`\\.(${extensions.join("|")})$`).test(id)) {
           return null;
@@ -2683,12 +2683,11 @@ const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
         }
         return {
           code: s.toString(),
-          map: null
-          // map: s.generateMap({
-          //   source: id,
-          //   hires: true,
-          //   includeContent: true
-          // }),
+          map: s.generateMap({
+            source: id,
+            hires: true,
+            includeContent: true
+          })
         };
       }
     }

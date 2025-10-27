@@ -7,5 +7,6 @@
     "target": "esnext",
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "resolveJsonModule": true
   }
 }
