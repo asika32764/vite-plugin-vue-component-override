@@ -2597,38 +2597,14 @@ function vueComponentOverride(options = {}) {
   const handleStaticImports = options.handleStaticImports ?? true;
   const handleDynamicImports = options.handleDynamicImports ?? true;
   const excludes = options.excludes;
-  options.alias;
   const uid = Math.random().toString(36).substring(2, 8);
   return [
     {
       name: "vue-component-override",
       enforce: "pre",
-      // config(config) {
-      //   if (typeof config.build?.rollupOptions?.external === 'function') {
-      //     const originalExternal = config.build.rollupOptions.external;
-      //     config.build.rollupOptions.external = (source, ...rest) => {
-      //       if (source === pkg.name) {
-      //         return true;
-      //       }
-      //       return originalExternal(source, ...rest);
-      //     };
-      //   } else {
-      //     config = mergeConfig(config, {
-      //       build: {
-      //         rollupOptions: {
-      //           external: [
-      //             pkg.name
-      //           ]
-      //         }
-      //       }
-      //     });
-      //   }
-      //
-      //   return config;
-      // },
       transform(code, id) {
         const fileUri = new URL(id, "file://");
-        if (id.endsWith(".vue")) {
+        if (fileUri.pathname.endsWith(".vue")) {
           if (fileUri.searchParams.get("setup") !== "true") {
             return null;
           }
@@ -2641,9 +2617,8 @@ function vueComponentOverride(options = {}) {
         }
         let safeCode = stripComments(code);
         let shouldAddResolver = false;
-        let shouldAddAsyncResolver = false;
         const resolveFuncName = `__VUE_COMPONENT_OVERRIDE_RESOLVE_${uid}__`;
-        const resolveAsyncFuncName = `__VUE_COMPONENT_OVERRIDE_ASYNC_RESOLVE_${uid}__`;
+        const resolveCodes = [];
         const s = new MagicString(code);
         if (handleStaticImports) {
           const regex = /import\s+(.*?)\s+from\s+['"]((.*?)\.vue)['"]\s*(;?)/g;
@@ -2656,30 +2631,33 @@ function vueComponentOverride(options = {}) {
             const start = matches.index;
             const end = start + match2.length;
             const tmpName = component + "__Tmp" + Math.floor(Math.random() * 1e5);
-            let replaced = `import ${tmpName} from '${uri}';
-
-const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
+            let replaced = `import ${tmpName} from '${uri}';`;
+            resolveCodes.push(`const ${component} = ${resolveFuncName}('${component}', ${tmpName});`);
             shouldAddResolver = true;
             s.overwrite(start, end, replaced);
           }
         }
         if (handleDynamicImports) {
-          const regex = /(const|let|var)\s+(\w+)\s*=\s*defineAsyncComponent\(\s*\(\s*=>\s*import\(\s*['"]([^'"]+?\.vue)['"]\s*\)\s*\)\s*\)/g;
+          const regex = /(const|let|var)\s+(.+)\s*=\s*defineAsyncComponent\(\(\)\s*=>\s*import\(\s*['"](.+?\.vue)['"]\s*\)\s*\);?/g;
           let matches;
           while (matches = regex.exec(safeCode)) {
-            const [match2, sign, component, uri] = matches;
+            let [match2, sign, component, uri] = matches;
+            component = component.trim();
             const start = matches.index;
             const end = start + match2.length;
             const replaced = `${sign} ${component} = ${resolveFuncName}('${component}', defineAsyncComponent(() => import('${uri}')))`;
-            shouldAddAsyncResolver = true;
+            shouldAddResolver = true;
             s.overwrite(start, end, replaced);
           }
         }
         if (shouldAddResolver) {
-          addResolverToFile("resolveVueComponent", resolveFuncName, s, safeCode, id);
+          addImportToFile("resolveVueComponent", resolveFuncName, s, safeCode, id);
         }
-        if (shouldAddAsyncResolver) {
-          addResolverToFile("resolveVueAsyncComponent", resolveAsyncFuncName, s, safeCode, id);
+        if (resolveCodes.length > 0) {
+          addResolveToFile(resolveCodes, s, safeCode);
+        }
+        if (id.includes("Additional")) {
+          console.log(s.toString());
         }
         return {
           code: s.toString(),
@@ -2693,7 +2671,7 @@ const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
     }
   ];
 }
-function addResolverToFile(importName, funcName, s, code, id) {
+function addImportToFile(importName, funcName, s, code, id) {
   if (!new RegExp(`{.*?${funcName}.*?}s+from`).test(code)) {
     const importLine = `import { ${importName} as ${funcName} } from '${pkg.name}';
 `;
@@ -2709,6 +2687,20 @@ ${importLine}`);
     } else {
       s.prepend(importLine);
     }
+  }
+  return code;
+}
+function addResolveToFile(codes, s, code, id) {
+  const setupMatch = code.match(/setup\s*\((.*?)\)\s*{?/);
+  if (setupMatch) {
+    const insertPos = setupMatch.index + setupMatch[0].length;
+    s.appendLeft(insertPos, `
+${codes.join("\n")}
+`);
+  } else {
+    s.prepend(`
+${codes.join("\n")}
+`);
   }
   return code;
 }

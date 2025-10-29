@@ -1,40 +1,53 @@
 # Vite Plugin: vue-component-override
 
-This plugin is an experimental proof-of-concept that lets developers override Vue Single File Components without
-changing the original SFC files.
+This plugin is an experimental proof-of-concept that lets developers override Vue Single File
+Components without changing the original SFC files.
 
-It allows overriding Vue components, which is useful when an app needs to change component behavior for different
-environments or requirements.
+It allows overriding Vue components, which is useful when an app needs to change component behavior
+for different environments or requirements.
 
 ## Introduction
 
-Because of how Vue templates are compiled and how Vite/Rollup bundle code, once a component library is compiled into JS
-there is no way to replace or force-override components at runtime in a consuming project. This plugin injects a
-resolver at build time so consuming projects can override specific components as needed.
+Because of how Vue templates are compiled and how Vite/Rollup bundle code, once a component library
+is compiled into JS there is no way to replace or force-override components at runtime in a
+consuming project. This plugin injects a resolver at build time so consuming projects can override
+specific components as needed.
 
 ### How it works
 
-During build, the plugin finds any import statements that load `*.vue` components and replaces them with a call to a
-resolver function:
+When the original Vue is compiled, components that are statically imported may be inlined, 
+improving runtime performance and enabling better static analysis:
 
 ```ts
 import Foo from '~myui/components/Foo.vue';
+```
 
-// Convert to:
+Will be compiled to:
 
+```ts
+const Foo = defineComponent({ setup(props) { ... } });
+```
+
+However, the downside is that such inlined component references cannot be overridden at 
+runtime in the app. This plugin finds any import statements that load `*.vue` components 
+and replaces them with a call to a resolver function:
+
+```ts
+// After plugin processing
 import { resolveVueComponent } from 'vite-plugin-vue-component-override';
 import Foo_Tmp45833 from '~myui/components/Foo.vue';
 
 const Foo = resolveVueComponent('Foo', Foo_Tmp45833);
 ```
 
-If the app using the library has overridden a component, `resolveVueComponent()` returns the overridden component; otherwise
-it returns the original.
+If the app has overridden a component, `resolveVueComponent()` returns the
+overridden component; otherwise it returns the original.
 
-Then you can simply use `app.component('Foo', ...)` to override the component in the consuming app.
+you can simply use `app.component('Foo', ...)` to override the component in the consuming app.
 
 ```ts
 import { createApp } from '@vue/runtime-dom';
+
 const app = createApp(MyApp);
 
 // Override here
@@ -50,16 +63,17 @@ const Foo = defineAsyncComponent(() => import('~myui/components/Foo.vue'));
 
 // Convert to:
 
-import { resolveVueAsyncComponent } from 'vite-plugin-vue-component-override';
+import { resolveVueComponent } from 'vite-plugin-vue-component-override';
 
-const Foo = resolveVueAsyncComponent('Foo', defineAsyncComponent(() => import('~myui/components/Foo.vue')));
+const Foo = resolveVueComponent('Foo', defineAsyncComponent(() => import('~myui/components/Foo.vue')));
 ```
 
 ### Limitations and Use Cases
 
-This plugin must inject the resolver during the component-library build, so it cannot override components in
-already-published `npm` libraries. It is useful for companies or teams that maintain internal libraries and need to
-change library behavior for specific projects.
+This plugin must inject the resolver during the component-library build, so it cannot override
+components in already-published `npm` libraries. 
+It is useful for companies or teams that maintain internal libraries and need to change library 
+behavior for specific projects.
 
 ## Installation
 
@@ -91,7 +105,8 @@ export default defineConfig({
 });
 ```
 
-Now start developing your Vue component library. The plugin will automatically inject the resolver when you build.
+Now start developing your Vue component library. The plugin will automatically inject the resolver
+when you build.
 
 ```ts
 import Foo from '~myui/components/Foo.vue';

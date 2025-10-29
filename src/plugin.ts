@@ -1,6 +1,6 @@
 import MagicString from 'magic-string';
 import { minimatch } from 'minimatch';
-import { mergeConfig, PluginOption } from 'vite';
+import { PluginOption } from 'vite';
 import pkg from '../package.json' with { type: 'json' };
 
 export interface VueComponentOverrideOptions {
@@ -19,44 +19,16 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
   const handleStaticImports = options.handleStaticImports ?? true;
   const handleDynamicImports = options.handleDynamicImports ?? true;
   const excludes = options.excludes;
-  const aliasOption = options.alias;
   const uid = Math.random().toString(36).substring(2, 8);
 
   return [
     {
       name: 'vue-component-override',
       enforce: 'pre',
-      // config(config) {
-      //   if (typeof config.build?.rollupOptions?.external === 'function') {
-      //     const originalExternal = config.build.rollupOptions.external;
-      //     config.build.rollupOptions.external = (source, ...rest) => {
-      //       if (source === pkg.name) {
-      //         return true;
-      //       }
-      //       return originalExternal(source, ...rest);
-      //     };
-      //   } else {
-      //     config = mergeConfig(config, {
-      //       build: {
-      //         rollupOptions: {
-      //           external: [
-      //             pkg.name
-      //           ]
-      //         }
-      //       }
-      //     });
-      //   }
-      //
-      //   return config;
-      // },
       transform(code, id) {
         const fileUri = new URL(id, 'file://');
 
-        if (id.endsWith('.vue')) {
-          // if (id.includes('Additional')) {
-          //   console.log(id, code);
-          // }
-
+        if (fileUri.pathname.endsWith('.vue')) {
           if (fileUri.searchParams.get('setup') !== 'true') {
             return null;
           }
@@ -74,9 +46,8 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
         let safeCode = stripComments(code);
 
         let shouldAddResolver = false;
-        let shouldAddAsyncResolver = false;
         const resolveFuncName = `__VUE_COMPONENT_OVERRIDE_RESOLVE_${uid}__`;
-        const resolveAsyncFuncName = `__VUE_COMPONENT_OVERRIDE_ASYNC_RESOLVE_${uid}__`;
+        const resolveCodes: string[] = [];
 
         const s = new MagicString(code);
 
@@ -96,8 +67,8 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
             const end = start + match.length;
 
             const tmpName = component + '__Tmp' + Math.floor(Math.random() * 100000);
-            let replaced = `import ${tmpName} from '${uri}';\n
-const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
+            let replaced = `import ${tmpName} from '${uri}';`;
+            resolveCodes.push(`const ${component} = ${resolveFuncName}('${component}', ${tmpName});`);
 
             shouldAddResolver = true;
 
@@ -106,33 +77,37 @@ const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
         }
 
         if (handleDynamicImports) {
-          const regex = /(const|let|var)\s+(\w+)\s*=\s*defineAsyncComponent\(\s*\(\s*=>\s*import\(\s*['"]([^'"]+?\.vue)['"]\s*\)\s*\)\s*\)/g;
-
+          const regex = /(const|let|var)\s+(.+)\s*=\s*defineAsyncComponent\(\(\)\s*=>\s*import\(\s*['"](.+?\.vue)['"]\s*\)\s*\);?/g;
+          
           let matches: RegExpExecArray | null;
           while (matches = regex.exec(safeCode)) {
-            const [match, sign, component, uri] = matches;
+            let [match, sign, component, uri] = matches;
+
+            component = component.trim();
 
             const start = matches.index;
             const end = start + match.length;
 
             const replaced = `${sign} ${component} = ${resolveFuncName}('${component}', defineAsyncComponent(() => import('${uri}')))`
 
-            shouldAddAsyncResolver = true;
+            shouldAddResolver = true;
 
             s.overwrite(start, end, replaced);
           }
         }
 
         if (shouldAddResolver) {
-          addResolverToFile('resolveVueComponent', resolveFuncName, s, safeCode, id);
+          addImportToFile('resolveVueComponent', resolveFuncName, s, safeCode, id);
         }
 
-        if (shouldAddAsyncResolver) {
-          addResolverToFile('resolveVueAsyncComponent', resolveAsyncFuncName, s, safeCode, id);
+        if (resolveCodes.length > 0) {
+          addResolveToFile(resolveCodes, s, safeCode, id);
         }
-        // if (id.includes('Additional')) {
-        //   console.log(s.toString());
-        // }
+        
+        if (id.includes('Additional')) {
+          console.log(s.toString());
+        }
+        
         return {
           code: s.toString(),
           map: s.generateMap({
@@ -146,28 +121,7 @@ const ${component} = ${resolveFuncName}('${component}', ${tmpName});`;
   ];
 };
 
-function resolveAlias(alias: VueComponentOverrideOptions['alias'], id: string): string {
-  if (!alias) {
-    return id;
-  }
-
-  if (typeof alias === 'function') {
-    const result = alias(id);
-    if (result) {
-      return result;
-    }
-  } else {
-    for (const [key, value] of Object.entries(alias)) {
-      if (id.startsWith(key)) {
-        return id.replace(key, value);
-      }
-    }
-  }
-
-  return id;
-}
-
-function addResolverToFile(importName: string, funcName: string, s: MagicString, code: string, id: string) {
+function addImportToFile(importName: string, funcName: string, s: MagicString, code: string, id: string) {
   // Use RegExp object
   if (!new RegExp(`{.*?${funcName}.*?}\s+from`).test(code)) {
     const importLine = `import { ${importName} as ${funcName} } from '${pkg.name}';\n`
@@ -187,6 +141,19 @@ function addResolverToFile(importName: string, funcName: string, s: MagicString,
   }
 
   return code;
+}
+
+function addResolveToFile(codes: string[], s: MagicString, code: string, id: string) {
+  // Find `setup(...)` and append to top
+    const setupMatch = code.match(/setup\s*\((.*?)\)\s*{?/);
+    if (setupMatch) {
+      const insertPos = setupMatch.index! + setupMatch[0].length;
+      s.appendLeft(insertPos, `\n${codes.join('\n')}\n`);
+    } else {
+      s.prepend(`\n${codes.join('\n')}\n`);
+    }
+
+    return code;
 }
 
 function isExcluded(
@@ -232,13 +199,4 @@ function stripComments(code: string): string {
   return code
     .replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length))
     .replace(/\/\/.*$/gm, (m) => ' '.repeat(m.length))
-}
-
-function restoreComments(code: string, comments: CommentPlaceholder[]): string {
-  for (const { key, value } of comments) {
-    const re = new RegExp(key, 'g');
-    code = code.replace(re, value);
-  }
-
-  return code;
 }
