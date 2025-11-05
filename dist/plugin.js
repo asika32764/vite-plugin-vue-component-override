@@ -2656,9 +2656,6 @@ function vueComponentOverride(options = {}) {
         if (resolveCodes.length > 0) {
           addResolveToFile(resolveCodes, s, safeCode);
         }
-        if (id.includes("Additional")) {
-          console.log(s.toString());
-        }
         return {
           code: s.toString(),
           map: s.generateMap({

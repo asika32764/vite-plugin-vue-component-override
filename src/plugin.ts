@@ -104,10 +104,6 @@ export default function vueComponentOverride(options: VueComponentOverrideOption
           addResolveToFile(resolveCodes, s, safeCode, id);
         }
         
-        if (id.includes('Additional')) {
-          console.log(s.toString());
-        }
-        
         return {
           code: s.toString(),
           map: s.generateMap({
